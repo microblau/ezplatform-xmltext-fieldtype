@@ -45,6 +45,11 @@ class Gateway
         return $result;
     }
 
+    /**
+     * @param $dryRun
+     * @param OutputInterface $output
+     * @return int Number of field definitions which was converted
+     */
     public function convertFieldDefinitions($dryRun, OutputInterface $output)
     {
         $query = $this->dbal->createQueryBuilder();
@@ -85,6 +90,8 @@ class Gateway
         }
 
         $output->writeln("Converted $count ezxmltext field definitions to ezrichtext");
+
+        return $count;
     }
 
     public function getRowCountOfContentObjectAttributes($datatypeString, $contentId)
