@@ -41,6 +41,11 @@ class ImportXmlCommand extends ContainerAwareCommand
      */
     private $output;
 
+    /**
+     * @var string|null
+     */
+    private $contentObjectId;
+
     public function __construct(Gateway $gateway, RichTextConverter $converter)
     {
         parent::__construct();
@@ -97,7 +102,7 @@ EOT
 
         $this->output = $output;
 
-        $contentObjectId = $input->getOption('content-object');
+        $this->contentObjectId = $input->getOption('content-object');
 
         if ($input->getOption('export-dir')) {
             $this->exportDir = $input->getOption('export-dir');
@@ -117,10 +122,10 @@ EOT
         }
         $this->converter->setImageContentTypes($imageContentTypeIds);
 
-        $this->importDumps($dryRun, $contentObjectId);
+        $this->importDumps($dryRun);
     }
 
-    protected function importDumps($dryRun, $contentObjectId = null)
+    protected function importDumps($dryRun)
     {
         foreach (new \DirectoryIterator($this->exportDir) as $dirItem) {
             if ($dirItem->isFile() && $dirItem->getExtension() === 'xml') {
@@ -142,7 +147,7 @@ EOT
                 $language = $fileNameArray[4];
                 $filename = $this->exportDir . DIRECTORY_SEPARATOR . $dirItem->getFilename();
 
-                if ($contentObjectId !== null && $contentObjectId !== $objectId) {
+                if ($this->contentObjectId !== null && $this->contentObjectId !== $objectId) {
                     continue;
                 }
 
@@ -154,7 +159,9 @@ EOT
 
     protected function validateConversion(DOMDocument $xmlDoc, $filename, $attributeId)
     {
-        $this->converter->convert($xmlDoc, true, true, $attributeId);
+        $docBookDoc = new DOMDocument();
+        $docBookDoc->loadXML($this->converter->convert($xmlDoc, true, true, $attributeId));
+        $docBookDoc->formatOutput = true;
         // Looks like XSLT processor is setting formatOutput to true
         $xmlDoc->formatOutput = false;
         $errors = $this->converter->getErrors();
@@ -176,6 +183,11 @@ EOT
                         }
                     }
                 }
+            }
+
+            if ($this->contentObjectId !== null) {
+                $this->output->writeln('Docbook result:');
+                $this->output->writeln($docBookDoc->saveXML());
             }
         } else {
             $result = true;
